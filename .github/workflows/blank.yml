@@ -1,0 +1,30 @@
+name: Spotless Check & Apply
+on: [push]
+
+jobs:
+  spotless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed to amend commits later
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run Spotless Check
+        id: spotless-check
+        run: ./gradlew spotlessCheck || exit 1
+
+      - name: Apply Spotless if needed
+        if: failure() && steps.spotless-check.outcome == 'failure'
+        run: |
+          ./gradlew spotlessApply
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit --amend --no-edit
+          git push --force
